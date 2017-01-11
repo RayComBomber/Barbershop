@@ -11,57 +11,56 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 public class BarberShopMain {
-	
+
 	private static final int BARBER_COUNT = 3;
 	private static final int customerSofaSize = 8;
 	private static final int customerStandingSize = 12;
-	private static final int MAX_CUSTOMER_COUNT = 30;
-	private static final int TIME_BETWEEN_CUSTOMERS = 800;
-	
-	private static ScheduledExecutorService schedulePool =  Executors.newScheduledThreadPool(1);
+	private static final int MAX_CUSTOMER_COUNT = 35;
+	private static final int TIME_BETWEEN_CUSTOMERS = 700;
+
+	private static ScheduledExecutorService schedulePool = Executors.newScheduledThreadPool(1);
 	private static ExecutorService pool = Executors.newFixedThreadPool(8);
-	
+
 	private static ScheduledFuture<?> futureCustomers;
+	private static List<Barber> barberThreads = new ArrayList<>();
 	private static List<Future<?>> barberFutures = new ArrayList<>();
 	private static List<Future<?>> cutomerFutures = new ArrayList<>();
-	
+
 	public static void main(String[] args) {
 		System.out.println("Barber Shop Simulation:");
-		
+
 		// Init
 		BarberShop shop = new BarberShop(customerSofaSize, customerStandingSize);
-		
-		//create barber
+
+		// create barber
 		for (int i = 0; i < BARBER_COUNT; i++) {
 			Barber newBarber = new Barber(i, shop);
+			barberThreads.add(newBarber);
 			barberFutures.add(pool.submit(newBarber));
 		}
-		
-		
+
 		// create customers
 		futureCustomers = schedulePool.scheduleAtFixedRate(() -> {
 			createCustomers(shop);
-			}, 0, TIME_BETWEEN_CUSTOMERS, TimeUnit.MILLISECONDS);
+		}, 0, TIME_BETWEEN_CUSTOMERS, TimeUnit.MILLISECONDS);
 	}
-	
-	private static synchronized void createCustomers(BarberShop shop) {		
+
+	private static synchronized void createCustomers(BarberShop shop) {
 		int customerId = Customer.getAndIncrementGlobalCustomerCount();
 		Customer newCostomer = new Customer(customerId, shop);
 		cutomerFutures.add(pool.submit(newCostomer));
-		
-		if(customerId == MAX_CUSTOMER_COUNT){
+
+		if (customerId == MAX_CUSTOMER_COUNT) {
 			futureCustomers.cancel(false);
-			for (Future<?> future : barberFutures) {
-				future.cancel(false);
-				//TOFO: future.get() ?
+			for (Barber barberThread : barberThreads) {
+				barberThread.shutdown();
 			}
 			waitForTermination();
 		}
 	}
-	
+
 	private static void waitForTermination() {
 		// Wait until all open tasks are done
-		System.out.println("Waiting for last customer ...");
 		// Iterate ALL futures
 		cutomerFutures.addAll(barberFutures);
 		for (Future<?> f : cutomerFutures) {
@@ -71,14 +70,14 @@ public class BarberShopMain {
 				e.printStackTrace();
 			}
 		}
-		
-		// end ExecutorServices 
+
+		// end ExecutorServices
 		pool.shutdown();
 		schedulePool.shutdown();
-		
+
 		try {
-			pool.awaitTermination(15, TimeUnit.SECONDS);
-			schedulePool.awaitTermination(15, TimeUnit.SECONDS);
+			pool.awaitTermination(10, TimeUnit.SECONDS);
+			schedulePool.awaitTermination(10, TimeUnit.SECONDS);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
