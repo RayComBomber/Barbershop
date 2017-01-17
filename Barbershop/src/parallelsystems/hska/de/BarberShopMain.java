@@ -13,10 +13,10 @@ import java.util.concurrent.TimeUnit;
 public class BarberShopMain {
 
 	private static final int BARBER_COUNT = 3;
-	private static final int customerSofaSize = 8;
-	private static final int customerStandingSize = 12;
+	private static final int customerSofaSize = 4;
+	private static final int customerStandingSize = 16;
 	private static final int MAX_CUSTOMER_COUNT = 35;
-	private static final int TIME_BETWEEN_CUSTOMERS = 700;
+	private static final int TIME_BETWEEN_CUSTOMERS = 1000;
 
 	private static ScheduledExecutorService schedulePool = Executors.newScheduledThreadPool(1);
 	private static ExecutorService pool = Executors.newFixedThreadPool(8);
